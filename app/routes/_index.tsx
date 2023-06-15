@@ -1,41 +1,49 @@
-import type { V2_MetaFunction } from "@remix-run/node";
+import { defer } from "@remix-run/node";
+import { useLoaderData, Await } from "@remix-run/react";
+import { useState, Suspense } from "react";
 
-export const meta: V2_MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
-};
-
-export default function Index() {
-  return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
-    </div>
-  );
-}
+export async function loader() {
+    return defer({
+      deferredResponse: new Promise((resolve) => setTimeout(resolve, 5000)).then(
+        () => "hey from slow thing"
+      ),
+    });
+  }
+  
+  export default function App() {
+    const { deferredResponse } = useLoaderData<typeof loader>();
+  
+    return (
+      <div>
+        <pre>"hey from instant thing"</pre>
+        <AwaitedItem deferredResponse={deferredResponse} />
+      </div>
+    );
+  }
+  
+  function AwaitedItem({
+    deferredResponse,
+  }: {
+    deferredResponse: Promise<string>;
+  }) {
+    const [showAwaitedItem, setShowAwaitedItem] = useState(false);
+  
+    return (
+      <div className="AwaitedItem">
+        <button
+          onClick={() =>
+            setShowAwaitedItem((prevShowAwaitedItem) => !prevShowAwaitedItem)
+          }
+        >
+          {showAwaitedItem ? "hide" : "show"}
+        </button>
+        <div style={{ visibility: showAwaitedItem ? "visible" : "hidden" }}>
+          <Suspense fallback="loading slow thing...">
+            <Await resolve={deferredResponse}>
+              {(data) => <pre>{JSON.stringify(data)}</pre>}
+            </Await>
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
